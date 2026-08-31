@@ -52,11 +52,18 @@ https://raw.githubusercontent.com/konstantin-fokhtberger/hayase-russian-subs/mai
 
 В Hayase откройте **Settings -> Extensions**, вставьте этот URL и нажмите **Import Extensions**. Для последующих обновлений Hayase будет читать `update` из manifest.
 
-## CORS и fallback
+## CORS и subtitle proxy
 
-Anime365 API не объявляет стандартный `Access-Control-Allow-Origin` в проверенных HTTP-ответах. Manifest содержит поле `url` с base64-значением `https://smotret-anime.app`: Hayase использует его для включения своего CORS-механизма для источника. Это штатное предназначение поля по документации Hayase, но его нужно проверить именно в целевой версии/платформе Hayase.
+Anime365 API можно читать из extension worker через manifest `url`, но его endpoint `/translations/ass/{id}` не отдаёт `Access-Control-Allow-Origin`. Hayase player загружает результат subtitle source обычным `fetch`, поэтому прямой ASS URL не воспроизводится. Для работы нужен CORS proxy.
 
-Если конкретная платформа Hayase всё же блокирует запросы, не добавляйте HTML scraping в extension. Реализован простой переключаемый fallback: задайте `adapterUrl` - расширение вызовет статeless HTTP adapter и примет только массив прямых URL ASS. Контракт приведён в [docs/fallback-adapter.md](docs/fallback-adapter.md).
+В проекте есть ограниченный stateless Cloudflare Worker в [worker](worker): он принимает только URL файлов Anime365 `/translations/ass/{id}`, не имеет БД, не принимает произвольные URL и добавляет CORS. После deployment укажите его URL вида `https://<worker>.workers.dev/subtitle` в настройке extension `subtitleProxyUrl`.
+
+```sh
+cd worker
+npx wrangler deploy
+```
+
+Для первого deployment потребуется войти в Cloudflare. `adapterUrl` остаётся альтернативной архитектурой для собственного source/matcher; контракт - в [docs/fallback-adapter.md](docs/fallback-adapter.md).
 
 ## Ограничения
 

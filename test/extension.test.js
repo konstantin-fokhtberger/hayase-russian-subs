@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { HayaseRussianSubsSource, normalizeTitle, rankTranslations, selectSeries, titleScore } from '../src/extension.js'
+import { HayaseRussianSubsSource, normalizeTitle, rankTranslations, selectSeries, subtitleUrl, titleScore } from '../src/extension.js'
 
 test('normalizes punctuation, diacritics and season markers', () => {
   assert.equal(normalizeTitle('Frieren: Beyond Journey’s End - Season 2'), 'frieren beyond journeys end')
@@ -46,10 +46,20 @@ test('single follows AniList ID, episode and direct ASS download route', async (
           ]
     return { ok: true, json: async () => ({ data }) }
   }
-  const result = await new HayaseRussianSubsSource().single({ anilistId: 154587, episode: 8, titles: [], fetch })
+  const result = await new HayaseRussianSubsSource().single(
+    { anilistId: 154587, episode: 8, titles: ['Frieren: Beyond Journey’s End'], fetch },
+    { subtitleProxyUrl: 'https://subs.example.workers.dev/subtitle' }
+  )
   assert.deepEqual(seen, ['/api/series', '/api/episodes', '/api/translations'])
   assert.deepEqual(result, [
-    { url: 'https://smotret-anime.app/translations/ass/20?download=1', language: 'RU' },
-    { url: 'https://smotret-anime.app/translations/ass/10?download=1', language: 'RU' }
+    { url: 'https://subs.example.workers.dev/subtitle?url=https%3A%2F%2Fsmotret-anime.app%2Ftranslations%2Fass%2F20%3Fdownload%3D1', language: 'RU' },
+    { url: 'https://subs.example.workers.dev/subtitle?url=https%3A%2F%2Fsmotret-anime.app%2Ftranslations%2Fass%2F10%3Fdownload%3D1', language: 'RU' }
   ])
+})
+
+test('wraps the direct subtitle in a configured HTTPS proxy URL', () => {
+  assert.equal(
+    subtitleUrl('https://smotret-anime.app/translations/ass/42?download=1', 'https://subs.example.workers.dev/subtitle'),
+    'https://subs.example.workers.dev/subtitle?url=https%3A%2F%2Fsmotret-anime.app%2Ftranslations%2Fass%2F42%3Fdownload%3D1'
+  )
 })
