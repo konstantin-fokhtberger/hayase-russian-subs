@@ -57,7 +57,7 @@ https://raw.githubusercontent.com/konstantin-fokhtberger/hayase-russian-subs/mai
 
 Ни JSON API Anime365, ни endpoint `/translations/ass/{id}` не отдают `Access-Control-Allow-Origin`. Поэтому и extension worker, и Hayase player не могут обращаться к ним напрямую. Для работы нужен CORS proxy.
 
-В проекте есть ограниченный stateless Cloudflare Worker в [worker](worker): он принимает только URL файлов Anime365 `/translations/ass/{id}` и три нужных API-маршрута (`/series`, `/episodes`, `/translations`), не имеет БД, не принимает произвольные URL и добавляет CORS. Основной Worker развёрнут по адресу `https://hayase-russian-subs-proxy.arecvien.workers.dev/subtitle`; этот URL задан значением по умолчанию для `subtitleProxyUrl`.
+В проекте есть ограниченный stateless Cloudflare Worker в [worker](worker): он принимает только URL файлов Anime365 `/translations/ass/{id}` и три нужных API-маршрута (`/series`, `/episodes`, `/translations`), не имеет БД, не принимает произвольные URL и добавляет CORS. Основной Worker развёрнут по адресу `https://hayase-russian-subs-proxy.arecvien.workers.dev/subtitle` и встроен в код расширения как fallback. Настройка `subtitleProxyUrl` необязательна и нужна только для переопределения Worker.
 
 ```sh
 cd worker
@@ -68,6 +68,6 @@ npx wrangler deploy
 
 ## Ограничения
 
-- Результат подтверждён на уровне API и HTTP, но не прогнан внутри установленного Hayase: для этого нужен локальный экземпляр приложения.
+- API, Worker и standalone bundle проверены автоматически; финальная end-to-end проверка отображения дорожки в плеере Hayase пока не завершена.
 - AniList mapping может отсутствовать, а title fallback намеренно консервативен.
 - Сайт и неофициальный API могут измениться. `test()` проверяет доступность и форму ответа API, но не гарантирует наличие субтитров для каждого эпизода.
