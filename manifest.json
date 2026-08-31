@@ -5,7 +5,7 @@
     "name": "Hayase Russian Subs",
     "description": "Russian ASS subtitles from Anime365, matched by AniList ID and episode.",
     "id": "hayase-russian-subs",
-    "version": "0.2.0",
+    "version": "0.2.1",
     "type": "subtitle",
     "accuracy": "medium",
     "icon": "https://smotret-anime.app/favicon.ico",
@@ -24,7 +24,7 @@
       "subtitleProxyUrl": {
         "type": "string",
         "description": "Required for Anime365 tracks: HTTPS URL of the bundled Worker /subtitle endpoint. It adds CORS for ASS downloads.",
-        "default": ""
+        "default": "https://hayase-russian-subs-proxy.arecvien.workers.dev/subtitle"
       },
       "maxResults": {
         "type": "number",

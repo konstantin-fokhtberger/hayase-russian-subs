@@ -57,7 +57,7 @@ https://raw.githubusercontent.com/konstantin-fokhtberger/hayase-russian-subs/mai
 
 Anime365 API можно читать из extension worker через manifest `url`, но его endpoint `/translations/ass/{id}` не отдаёт `Access-Control-Allow-Origin`. Hayase player загружает результат subtitle source обычным `fetch`, поэтому прямой ASS URL не воспроизводится. Для работы нужен CORS proxy.
 
-В проекте есть ограниченный stateless Cloudflare Worker в [worker](worker): он принимает только URL файлов Anime365 `/translations/ass/{id}`, не имеет БД, не принимает произвольные URL и добавляет CORS. После deployment укажите его URL вида `https://<worker>.workers.dev/subtitle` в настройке extension `subtitleProxyUrl`.
+В проекте есть ограниченный stateless Cloudflare Worker в [worker](worker): он принимает только URL файлов Anime365 `/translations/ass/{id}`, не имеет БД, не принимает произвольные URL и добавляет CORS. Основной Worker развёрнут по адресу `https://hayase-russian-subs-proxy.arecvien.workers.dev/subtitle`; этот URL задан значением по умолчанию для `subtitleProxyUrl`.
 
 ```sh
 cd worker
