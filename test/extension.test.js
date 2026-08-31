@@ -31,7 +31,7 @@ test('ranks active Russian subtitle translations deterministically', () => {
   assert.deepEqual(ranked.map(item => item.id), [2, 1])
 })
 
-test('single follows AniList ID, episode and direct ASS download route', async () => {
+test('single uses the built-in proxy without persisted extension settings', async () => {
   const seen = []
   const fetch = async rawUrl => {
     const url = new URL(rawUrl)
@@ -48,13 +48,12 @@ test('single follows AniList ID, episode and direct ASS download route', async (
     return { ok: true, json: async () => ({ data }) }
   }
   const result = await new HayaseRussianSubsSource().single(
-    { anilistId: 154587, episode: 8, titles: ['Frieren: Beyond Journey’s End'], fetch },
-    { subtitleProxyUrl: 'https://subs.example.workers.dev/subtitle' }
+    { anilistId: 154587, episode: 8, titles: ['Frieren: Beyond Journey’s End'], fetch }
   )
   assert.deepEqual(seen, ['/series', '/episodes', '/translations'])
   assert.deepEqual(result, [
-    { url: 'https://subs.example.workers.dev/subtitle?url=https%3A%2F%2Fsmotret-anime.app%2Ftranslations%2Fass%2F20%3Fdownload%3D1', language: 'RU.ass' },
-    { url: 'https://subs.example.workers.dev/subtitle?url=https%3A%2F%2Fsmotret-anime.app%2Ftranslations%2Fass%2F10%3Fdownload%3D1', language: 'RU.ass' }
+    { url: 'https://hayase-russian-subs-proxy.arecvien.workers.dev/subtitle?url=https%3A%2F%2Fsmotret-anime.app%2Ftranslations%2Fass%2F20%3Fdownload%3D1', language: 'RU.ass' },
+    { url: 'https://hayase-russian-subs-proxy.arecvien.workers.dev/subtitle?url=https%3A%2F%2Fsmotret-anime.app%2Ftranslations%2Fass%2F10%3Fdownload%3D1', language: 'RU.ass' }
   ])
 })
 

@@ -5,7 +5,7 @@
     "name": "Hayase Russian Subs",
     "description": "Russian ASS subtitles from Anime365, matched by AniList ID and episode.",
     "id": "hayase-russian-subs",
-    "version": "0.2.4",
+    "version": "0.2.5",
     "type": "subtitle",
     "accuracy": "medium",
     "icon": "https://smotret-anime.app/favicon.ico",
@@ -13,7 +13,7 @@
     "url": "aHR0cHM6Ly9zbW90cmV0LWFuaW1lLmFwcA==",
     "languages": ["RU"],
     "update": "https://raw.githubusercontent.com/konstantin-fokhtberger/hayase-russian-subs/main/manifest.json",
-    "code": "https://raw.githubusercontent.com/konstantin-fokhtberger/hayase-russian-subs/main/dist/hayase-russian-subs.js?v=0.2.4",
+    "code": "https://raw.githubusercontent.com/konstantin-fokhtberger/hayase-russian-subs/main/dist/hayase-russian-subs.js?v=0.2.5",
     "rateLimit": 2,
     "options": {
       "adapterUrl": {
@@ -23,7 +23,7 @@
       },
       "subtitleProxyUrl": {
         "type": "string",
-        "description": "Required for Anime365 tracks: HTTPS URL of the bundled Worker /subtitle endpoint. It adds CORS for Anime365 API and ASS downloads.",
+        "description": "Optional override for the bundled Anime365 CORS proxy. Leave empty to use the public project Worker.",
         "default": "https://hayase-russian-subs-proxy.arecvien.workers.dev/subtitle"
       },
       "maxResults": {

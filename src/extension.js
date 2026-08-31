@@ -1,4 +1,5 @@
 const API_ORIGIN = 'https://smotret-anime.app'
+const DEFAULT_SUBTITLE_PROXY_URL = 'https://hayase-russian-subs-proxy.arecvien.workers.dev/subtitle'
 const PREFERRED_AUTHORS = [
   'sovetromantica',
   'crunchyroll',
@@ -140,7 +141,7 @@ async function resolveSeries (fetcher, query, proxyUrl) {
 export class HayaseRussianSubsSource extends BaseSubtitleSource {
   async test () {
     try {
-      const response = await fetch(apiUrl('/series', { query: 'Frieren', limit: 1 }))
+      const response = await fetch(apiUrl('/series', { query: 'Frieren', limit: 1 }, DEFAULT_SUBTITLE_PROXY_URL))
       if (!response.ok) throw new Error(`Anime365 returned HTTP ${response.status}.`)
       const payload = await response.json()
       if (!Array.isArray(payload?.data)) throw new Error('Anime365 returned an unexpected response.')
@@ -153,22 +154,20 @@ export class HayaseRussianSubsSource extends BaseSubtitleSource {
   async single (query, options = {}) {
     const fetcher = query.fetch ?? fetch
     if (options.adapterUrl) return adapterResults(fetcher, options.adapterUrl, query)
-    if (!options.subtitleProxyUrl) {
-      throw new Error('Anime365 subtitle downloads require an HTTPS CORS proxy. Configure subtitleProxyUrl in the extension settings.')
-    }
+    const subtitleProxyUrl = options.subtitleProxyUrl || DEFAULT_SUBTITLE_PROXY_URL
 
-    const series = await resolveSeries(fetcher, query, options.subtitleProxyUrl)
+    const series = await resolveSeries(fetcher, query, subtitleProxyUrl)
     if (!series) return []
 
-    const episodes = await getData(fetcher, '/episodes', { seriesId: series.id, episodeInt: query.episode, isActive: 1, limit: 20 }, options.subtitleProxyUrl)
+    const episodes = await getData(fetcher, '/episodes', { seriesId: series.id, episodeInt: query.episode, isActive: 1, limit: 20 }, subtitleProxyUrl)
     const episode = episodeForNumber(Array.isArray(episodes) ? episodes : [], query.episode)
     if (!episode) return []
 
-    const translations = await getData(fetcher, '/translations', { episodeId: episode.id, type: 'subRu', isActive: 1, limit: 50 }, options.subtitleProxyUrl)
+    const translations = await getData(fetcher, '/translations', { episodeId: episode.id, type: 'subRu', isActive: 1, limit: 50 }, subtitleProxyUrl)
     return rankTranslations(Array.isArray(translations) ? translations : [])
       .slice(0, clampMaxResults(options.maxResults))
       .map(item => ({
-        url: subtitleUrl(`${API_ORIGIN}/translations/ass/${item.id}?download=1`, options.subtitleProxyUrl),
+        url: subtitleUrl(`${API_ORIGIN}/translations/ass/${item.id}?download=1`, subtitleProxyUrl),
         // Hayase uses `language` as the fetched file name and rejects names
         // without a supported subtitle extension before parsing the payload.
         language: 'RU.ass'
