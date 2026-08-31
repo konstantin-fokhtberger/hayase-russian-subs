@@ -73,7 +73,17 @@ export function subtitleUrl (directUrl, proxyUrl) {
   return proxy.toString()
 }
 
-function apiUrl (path, params = {}) {
+function apiUrl (path, params = {}, proxyUrl) {
+  if (proxyUrl) {
+    const proxy = new URL(proxyUrl)
+    proxy.pathname = '/api'
+    proxy.search = ''
+    proxy.searchParams.set('path', path)
+    for (const [key, value] of Object.entries(params)) {
+      if (value !== undefined && value !== null && value !== '') proxy.searchParams.set(key, String(value))
+    }
+    return proxy.toString()
+  }
   const url = new URL(`${API_ORIGIN}/api${path}`)
   for (const [key, value] of Object.entries(params)) {
     if (value !== undefined && value !== null && value !== '') url.searchParams.set(key, String(value))
@@ -81,8 +91,8 @@ function apiUrl (path, params = {}) {
   return url.toString()
 }
 
-async function getData (fetcher, path, params) {
-  const response = await fetcher(apiUrl(path, params))
+async function getData (fetcher, path, params, proxyUrl) {
+  const response = await fetcher(apiUrl(path, params, proxyUrl))
   if (!response.ok) throw new Error(`Anime365 API returned HTTP ${response.status}.`)
   const payload = await response.json()
   if (payload?.error) throw new Error(`Anime365 API error: ${payload.error.message ?? payload.error.code ?? 'unknown error'}.`)
@@ -112,7 +122,7 @@ async function adapterResults (fetcher, adapterUrl, query) {
   return payload.filter(item => item && typeof item.url === 'string' && item.language === 'RU')
 }
 
-async function resolveSeries (fetcher, query) {
+async function resolveSeries (fetcher, query, proxyUrl) {
   // Anime365 currently returns its default catalog page for anilistId=.
   // Search by Hayase's title variants, then use AniList ID only to select a result.
   const lookupTitles = [...new Set((query.titles ?? []).filter(Boolean))]
@@ -120,7 +130,7 @@ async function resolveSeries (fetcher, query) {
     .slice(0, 3)
   const candidates = []
   for (const title of lookupTitles) {
-    const results = await getData(fetcher, '/series', { query: title, limit: 10 })
+    const results = await getData(fetcher, '/series', { query: title, limit: 10 }, proxyUrl)
     if (Array.isArray(results)) candidates.push(...results)
   }
   const distinct = [...new Map(candidates.filter(item => item?.id).map(item => [item.id, item])).values()]
@@ -130,7 +140,7 @@ async function resolveSeries (fetcher, query) {
 export class HayaseRussianSubsSource extends BaseSubtitleSource {
   async test () {
     try {
-      const response = await fetch(apiUrl('/series', { anilistId: 154587, limit: 1 }))
+      const response = await fetch(apiUrl('/series', { query: 'Frieren', limit: 1 }))
       if (!response.ok) throw new Error(`Anime365 returned HTTP ${response.status}.`)
       const payload = await response.json()
       if (!Array.isArray(payload?.data)) throw new Error('Anime365 returned an unexpected response.')
@@ -147,14 +157,14 @@ export class HayaseRussianSubsSource extends BaseSubtitleSource {
       throw new Error('Anime365 subtitle downloads require an HTTPS CORS proxy. Configure subtitleProxyUrl in the extension settings.')
     }
 
-    const series = await resolveSeries(fetcher, query)
+    const series = await resolveSeries(fetcher, query, options.subtitleProxyUrl)
     if (!series) return []
 
-    const episodes = await getData(fetcher, '/episodes', { seriesId: series.id, episodeInt: query.episode, isActive: 1, limit: 20 })
+    const episodes = await getData(fetcher, '/episodes', { seriesId: series.id, episodeInt: query.episode, isActive: 1, limit: 20 }, options.subtitleProxyUrl)
     const episode = episodeForNumber(Array.isArray(episodes) ? episodes : [], query.episode)
     if (!episode) return []
 
-    const translations = await getData(fetcher, '/translations', { episodeId: episode.id, type: 'subRu', isActive: 1, limit: 50 })
+    const translations = await getData(fetcher, '/translations', { episodeId: episode.id, type: 'subRu', isActive: 1, limit: 50 }, options.subtitleProxyUrl)
     return rankTranslations(Array.isArray(translations) ? translations : [])
       .slice(0, clampMaxResults(options.maxResults))
       .map(item => ({

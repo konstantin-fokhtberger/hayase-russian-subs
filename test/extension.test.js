@@ -35,10 +35,11 @@ test('single follows AniList ID, episode and direct ASS download route', async (
   const seen = []
   const fetch = async rawUrl => {
     const url = new URL(rawUrl)
-    seen.push(url.pathname)
-    const data = url.pathname.endsWith('/series')
+    const endpoint = url.searchParams.get('path') ?? url.pathname.replace('/api', '')
+    seen.push(endpoint)
+    const data = endpoint === '/series'
       ? [{ id: 30414, anilistId: 154587 }]
-      : url.pathname.endsWith('/episodes')
+      : endpoint === '/episodes'
         ? [{ id: 314104, episodeInt: 8, episodeType: 'tv', isActive: 1 }]
         : [
             { id: 10, type: 'subRu', isActive: 1, authorsSummary: 'Unknown', priority: 100 },
@@ -50,7 +51,7 @@ test('single follows AniList ID, episode and direct ASS download route', async (
     { anilistId: 154587, episode: 8, titles: ['Frieren: Beyond Journey’s End'], fetch },
     { subtitleProxyUrl: 'https://subs.example.workers.dev/subtitle' }
   )
-  assert.deepEqual(seen, ['/api/series', '/api/episodes', '/api/translations'])
+  assert.deepEqual(seen, ['/series', '/episodes', '/translations'])
   assert.deepEqual(result, [
     { url: 'https://subs.example.workers.dev/subtitle?url=https%3A%2F%2Fsmotret-anime.app%2Ftranslations%2Fass%2F20%3Fdownload%3D1', language: 'RU' },
     { url: 'https://subs.example.workers.dev/subtitle?url=https%3A%2F%2Fsmotret-anime.app%2Ftranslations%2Fass%2F10%3Fdownload%3D1', language: 'RU' }
