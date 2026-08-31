@@ -5,7 +5,7 @@
     "name": "Hayase Russian Subs",
     "description": "Russian ASS subtitles from Anime365, matched by AniList ID and episode.",
     "id": "hayase-russian-subs",
-    "version": "0.2.2",
+    "version": "0.2.3",
     "type": "subtitle",
     "accuracy": "medium",
     "icon": "https://smotret-anime.app/favicon.ico",
@@ -13,7 +13,7 @@
     "url": "aHR0cHM6Ly9zbW90cmV0LWFuaW1lLmFwcA==",
     "languages": ["RU"],
     "update": "https://raw.githubusercontent.com/konstantin-fokhtberger/hayase-russian-subs/main/manifest.json",
-    "code": "https://raw.githubusercontent.com/konstantin-fokhtberger/hayase-russian-subs/main/dist/hayase-russian-subs.js",
+    "code": "https://raw.githubusercontent.com/konstantin-fokhtberger/hayase-russian-subs/main/dist/hayase-russian-subs.js?v=0.2.3",
     "rateLimit": 2,
     "options": {
       "adapterUrl": {
