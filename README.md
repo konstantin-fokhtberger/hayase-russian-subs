@@ -2,6 +2,8 @@
 
 `subtitle`-расширение для Hayase: подбирает русские ASS-субтитры из Anime365 по `AniList ID` и номеру эпизода.
 
+Полный контекст для продолжения разработки и восстановления окружения: [PROJECT_CONTEXT.md](PROJECT_CONTEXT.md).
+
 ## Статус MVP
 
 Проверено 31 августа 2026 г. на публичном зеркале `https://smotret-anime.app`:
@@ -30,7 +32,7 @@
 npm run check
 ```
 
-Bundle будет создан в `dist/hayase-russian-subs.js`; manifest - в `dist/manifest.json`.
+Build создаёт `dist/hayase-russian-subs.js`, versioned release bundle `dist/hayase-russian-subs-<version>.js` и `dist/manifest.json`. Старые versioned bundles сохраняются для уже установленных версий.
 
 ## Локальная установка в Hayase
 
@@ -70,6 +72,6 @@ npx wrangler deploy
 
 ## Ограничения
 
-- API, Worker и standalone bundle проверены автоматически; финальная end-to-end проверка отображения дорожки в плеере Hayase пока не завершена.
+- Версия 0.2.7 прошла end-to-end проверку в Hayase на `Koukaku Kidoutai: THE GHOST IN THE SHELL` (2026), episode 2: русские ASS-дорожки загружаются и различаются по авторам.
 - AniList mapping может отсутствовать, а title fallback намеренно консервативен.
 - Сайт и неофициальный API могут измениться. `test()` проверяет доступность и форму ответа API, но не гарантирует наличие субтитров для каждого эпизода.
