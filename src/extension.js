@@ -67,6 +67,16 @@ export function rankTranslations (translations) {
     })
 }
 
+export function translationFileName (translation) {
+  const authors = translation?.authorsSummary ?? translation?.authorsList?.join(', ') ?? `Translation ${translation?.id ?? 'unknown'}`
+  const safeAuthors = String(authors)
+    .replace(/[\\/:*?"<>|\u0000-\u001f]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, 80)
+  return `RU - ${safeAuthors || `Translation ${translation?.id ?? 'unknown'}`}.ass`
+}
+
 export function subtitleUrl (directUrl, proxyUrl) {
   if (!proxyUrl) return directUrl
   const proxy = new URL(proxyUrl)
@@ -170,7 +180,7 @@ export class HayaseRussianSubsSource extends BaseSubtitleSource {
         url: subtitleUrl(`${API_ORIGIN}/translations/ass/${item.id}?download=1`, subtitleProxyUrl),
         // Hayase uses `language` as the fetched file name and rejects names
         // without a supported subtitle extension before parsing the payload.
-        language: 'RU.ass'
+        language: translationFileName(item)
       }))
   }
 }

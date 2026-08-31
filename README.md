@@ -53,6 +53,8 @@ https://raw.githubusercontent.com/konstantin-fokhtberger/hayase-russian-subs/mai
 
 В Hayase откройте **Settings -> Extensions**, вставьте этот URL и нажмите **Import Extensions**. Для последующих обновлений Hayase будет читать `update` из manifest.
 
+Для каждого найденного перевода расширение возвращает отдельную ASS-дорожку с именем вида `RU - <автор>`, чтобы варианты Anime365 можно было различить в меню плеера.
+
 ## CORS и subtitle proxy
 
 Ни JSON API Anime365, ни endpoint `/translations/ass/{id}` не отдают `Access-Control-Allow-Origin`. Поэтому и extension worker, и Hayase player не могут обращаться к ним напрямую. Для работы нужен CORS proxy.

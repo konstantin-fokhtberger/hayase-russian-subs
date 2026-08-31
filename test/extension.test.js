@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { HayaseRussianSubsSource, normalizeTitle, rankTranslations, selectSeries, subtitleUrl, titleScore } from '../src/extension.js'
+import { HayaseRussianSubsSource, normalizeTitle, rankTranslations, selectSeries, subtitleUrl, titleScore, translationFileName } from '../src/extension.js'
 
 test('normalizes punctuation, diacritics and season markers', () => {
   assert.equal(normalizeTitle('Frieren: Beyond Journey’s End - Season 2'), 'frieren beyond journeys end')
@@ -31,6 +31,12 @@ test('ranks active Russian subtitle translations deterministically', () => {
   assert.deepEqual(ranked.map(item => item.id), [2, 1])
 })
 
+test('creates safe, distinguishable ASS file names from translation authors', () => {
+  assert.equal(translationFileName({ id: 1, authorsSummary: 'DEEP [Без цензуры]' }), 'RU - DEEP [Без цензуры].ass')
+  assert.equal(translationFileName({ id: 2, authorsList: ['Team/One', 'Editor'] }), 'RU - Team One, Editor.ass')
+  assert.equal(translationFileName({ id: 3 }), 'RU - Translation 3.ass')
+})
+
 test('single uses the built-in proxy without persisted extension settings', async () => {
   const seen = []
   const fetch = async rawUrl => {
@@ -52,8 +58,8 @@ test('single uses the built-in proxy without persisted extension settings', asyn
   )
   assert.deepEqual(seen, ['/series', '/episodes', '/translations'])
   assert.deepEqual(result, [
-    { url: 'https://hayase-russian-subs-proxy.arecvien.workers.dev/subtitle?url=https%3A%2F%2Fsmotret-anime.app%2Ftranslations%2Fass%2F20%3Fdownload%3D1', language: 'RU.ass' },
-    { url: 'https://hayase-russian-subs-proxy.arecvien.workers.dev/subtitle?url=https%3A%2F%2Fsmotret-anime.app%2Ftranslations%2Fass%2F10%3Fdownload%3D1', language: 'RU.ass' }
+    { url: 'https://hayase-russian-subs-proxy.arecvien.workers.dev/subtitle?url=https%3A%2F%2Fsmotret-anime.app%2Ftranslations%2Fass%2F20%3Fdownload%3D1', language: 'RU - AniLibria.ass' },
+    { url: 'https://hayase-russian-subs-proxy.arecvien.workers.dev/subtitle?url=https%3A%2F%2Fsmotret-anime.app%2Ftranslations%2Fass%2F10%3Fdownload%3D1', language: 'RU - Unknown.ass' }
   ])
 })
 

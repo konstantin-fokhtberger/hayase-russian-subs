@@ -1,6 +1,6 @@
 {
   "name": "hayase-russian-subs",
-  "version": "0.2.6",
+  "version": "0.2.7",
   "private": true,
   "description": "Russian subtitle source extension for Hayase, backed by Anime365.",
   "type": "module",
