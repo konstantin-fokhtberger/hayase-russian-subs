@@ -169,7 +169,9 @@ export class HayaseRussianSubsSource extends BaseSubtitleSource {
       .slice(0, clampMaxResults(options.maxResults))
       .map(item => ({
         url: subtitleUrl(`${API_ORIGIN}/translations/ass/${item.id}?download=1`, options.subtitleProxyUrl),
-        language: 'RU'
+        // Hayase uses `language` as the fetched file name and rejects names
+        // without a supported subtitle extension before parsing the payload.
+        language: 'RU.ass'
       }))
   }
 }

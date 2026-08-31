@@ -53,8 +53,8 @@ test('single follows AniList ID, episode and direct ASS download route', async (
   )
   assert.deepEqual(seen, ['/series', '/episodes', '/translations'])
   assert.deepEqual(result, [
-    { url: 'https://subs.example.workers.dev/subtitle?url=https%3A%2F%2Fsmotret-anime.app%2Ftranslations%2Fass%2F20%3Fdownload%3D1', language: 'RU' },
-    { url: 'https://subs.example.workers.dev/subtitle?url=https%3A%2F%2Fsmotret-anime.app%2Ftranslations%2Fass%2F10%3Fdownload%3D1', language: 'RU' }
+    { url: 'https://subs.example.workers.dev/subtitle?url=https%3A%2F%2Fsmotret-anime.app%2Ftranslations%2Fass%2F20%3Fdownload%3D1', language: 'RU.ass' },
+    { url: 'https://subs.example.workers.dev/subtitle?url=https%3A%2F%2Fsmotret-anime.app%2Ftranslations%2Fass%2F10%3Fdownload%3D1', language: 'RU.ass' }
   ])
 })
 
