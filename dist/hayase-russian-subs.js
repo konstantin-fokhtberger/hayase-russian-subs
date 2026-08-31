@@ -66,6 +66,13 @@ export function rankTranslations (translations) {
     })
 }
 
+export function subtitleUrl (directUrl, proxyUrl) {
+  if (!proxyUrl) return directUrl
+  const proxy = new URL(proxyUrl)
+  proxy.searchParams.set('url', directUrl)
+  return proxy.toString()
+}
+
 function apiUrl (path, params = {}) {
   const url = new URL(`${API_ORIGIN}/api${path}`)
   for (const [key, value] of Object.entries(params)) {
@@ -105,6 +112,21 @@ async function adapterResults (fetcher, adapterUrl, query) {
   return payload.filter(item => item && typeof item.url === 'string' && item.language === 'RU')
 }
 
+async function resolveSeries (fetcher, query) {
+  // Anime365 currently returns its default catalog page for anilistId=.
+  // Search by Hayase's title variants, then use AniList ID only to select a result.
+  const lookupTitles = [...new Set((query.titles ?? []).filter(Boolean))]
+    .sort((left, right) => normalizeTitle(right).length - normalizeTitle(left).length)
+    .slice(0, 3)
+  const candidates = []
+  for (const title of lookupTitles) {
+    const results = await getData(fetcher, '/series', { query: title, limit: 10 })
+    if (Array.isArray(results)) candidates.push(...results)
+  }
+  const distinct = [...new Map(candidates.filter(item => item?.id).map(item => [item.id, item])).values()]
+  return distinct.find(item => Number(item.anilistId) === Number(query.anilistId)) ?? selectSeries(distinct, query.titles)
+}
+
 export class HayaseRussianSubsSource extends BaseSubtitleSource {
   async test () {
     try {
@@ -121,14 +143,11 @@ export class HayaseRussianSubsSource extends BaseSubtitleSource {
   async single (query, options = {}) {
     const fetcher = query.fetch ?? fetch
     if (options.adapterUrl) return adapterResults(fetcher, options.adapterUrl, query)
-
-    const direct = await getData(fetcher, '/series', { anilistId: query.anilistId, limit: 5 })
-    let series = Array.isArray(direct) ? direct.find(item => Number(item.anilistId) === Number(query.anilistId)) : undefined
-
-    if (!series && query.titles?.length) {
-      const titleCandidates = await getData(fetcher, '/series', { query: query.titles[0], limit: 10 })
-      series = selectSeries(Array.isArray(titleCandidates) ? titleCandidates : [], query.titles)
+    if (!options.subtitleProxyUrl) {
+      throw new Error('Anime365 subtitle downloads require an HTTPS CORS proxy. Configure subtitleProxyUrl in the extension settings.')
     }
+
+    const series = await resolveSeries(fetcher, query)
     if (!series) return []
 
     const episodes = await getData(fetcher, '/episodes', { seriesId: series.id, episodeInt: query.episode, isActive: 1, limit: 20 })
@@ -139,7 +158,7 @@ export class HayaseRussianSubsSource extends BaseSubtitleSource {
     return rankTranslations(Array.isArray(translations) ? translations : [])
       .slice(0, clampMaxResults(options.maxResults))
       .map(item => ({
-        url: `${API_ORIGIN}/translations/ass/${item.id}?download=1`,
+        url: subtitleUrl(`${API_ORIGIN}/translations/ass/${item.id}?download=1`, options.subtitleProxyUrl),
         language: 'RU'
       }))
   }
