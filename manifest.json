@@ -3,9 +3,9 @@
     "manifestVersion": 2,
     "deprecated": false,
     "name": "Hayase Russian Subs",
-    "description": "Russian ASS subtitles from Anime365, matched by AniList ID and episode.",
+    "description": "Russian subtitles from Anime365 with an OpenSubtitles fallback, matched by title and episode.",
     "id": "hayase-russian-subs",
-    "version": "0.2.7",
+    "version": "0.3.0",
     "type": "subtitle",
     "accuracy": "medium",
     "icon": "https://smotret-anime.app/favicon.ico",
@@ -13,17 +13,17 @@
     "url": "aHR0cHM6Ly9zbW90cmV0LWFuaW1lLmFwcA==",
     "languages": ["RU"],
     "update": "https://raw.githubusercontent.com/konstantin-fokhtberger/hayase-russian-subs/main/manifest.json",
-    "code": "https://raw.githubusercontent.com/konstantin-fokhtberger/hayase-russian-subs/main/dist/hayase-russian-subs-0.2.7.js",
+    "code": "https://raw.githubusercontent.com/konstantin-fokhtberger/hayase-russian-subs/main/dist/hayase-russian-subs-0.3.0.js",
     "rateLimit": 2,
     "options": {
       "adapterUrl": {
         "type": "string",
-        "description": "Optional CORS-compatible fallback adapter URL. Leave empty to use Anime365 directly.",
+        "description": "Optional CORS-compatible fallback adapter URL. Leave empty to use Anime365 and OpenSubtitles through the project Worker.",
         "default": ""
       },
       "subtitleProxyUrl": {
         "type": "string",
-        "description": "Optional override for the bundled Anime365 CORS proxy. Leave empty to use the public project Worker.",
+        "description": "Optional override for the bundled subtitle Worker. Leave empty to use the public project Worker.",
         "default": "https://hayase-russian-subs-proxy.arecvien.workers.dev/subtitle"
       },
       "maxResults": {

@@ -1,5 +1,6 @@
 const API_ORIGIN = 'https://smotret-anime.app'
 const DEFAULT_SUBTITLE_PROXY_URL = 'https://hayase-russian-subs-proxy.arecvien.workers.dev/subtitle'
+const OPENSUBTITLES_RESULT_LIMIT = 1
 const PREFERRED_AUTHORS = [
   'sovetromantica',
   'crunchyroll',
@@ -77,6 +78,19 @@ export function translationFileName (translation) {
   return `RU - ${safeAuthors || `Translation ${translation?.id ?? 'unknown'}`}.ass`
 }
 
+function safeFileLabel (value, fallback) {
+  return String(value ?? fallback)
+    .replace(/[\\/:*?"<>|\u0000-\u001f]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, 80) || fallback
+}
+
+export function openSubtitlesFileName (subtitle) {
+  const uploader = safeFileLabel(subtitle?.attributes?.uploader?.name, 'Unknown uploader')
+  return `RU - OpenSubtitles - ${uploader}.srt`
+}
+
 export function subtitleUrl (directUrl, proxyUrl) {
   if (!proxyUrl) return directUrl
   const proxy = new URL(proxyUrl)
@@ -100,6 +114,105 @@ function apiUrl (path, params = {}, proxyUrl) {
     if (value !== undefined && value !== null && value !== '') url.searchParams.set(key, String(value))
   }
   return url.toString()
+}
+
+function workerUrl (proxyUrl, pathname, params = {}) {
+  const url = new URL(proxyUrl || DEFAULT_SUBTITLE_PROXY_URL)
+  url.pathname = pathname
+  url.search = ''
+  for (const [key, value] of Object.entries(params)) {
+    if (value !== undefined && value !== null && value !== '') url.searchParams.set(key, String(value))
+  }
+  return url.toString()
+}
+
+export function rankOpenSubtitles (subtitles, titles, episode) {
+  const requestedTitles = (titles ?? []).filter(Boolean)
+  return [...(subtitles ?? [])]
+    .filter(item => item?.attributes?.language === 'ru' && Array.isArray(item.attributes.files) && item.attributes.files.length)
+    .map(item => {
+      const attributes = item.attributes
+      const feature = attributes.feature_details ?? {}
+      const candidateTitles = [feature.parent_title, feature.title, feature.movie_name, attributes.release].filter(Boolean)
+      const matchScore = Math.max(0, ...requestedTitles.flatMap(title => candidateTitles.map(candidate => titleScore(title, candidate))))
+      const featureEpisode = Number(feature.episode_number ?? attributes.episode_number)
+      return { item, matchScore, featureEpisode }
+    })
+    .filter(({ matchScore, featureEpisode }) => matchScore >= 0.45 && (!Number.isFinite(featureEpisode) || featureEpisode === Number(episode)))
+    .sort((left, right) => {
+      const a = left.item.attributes
+      const b = right.item.attributes
+      const trusted = Number(Boolean(b.from_trusted)) - Number(Boolean(a.from_trusted))
+      if (trusted !== 0) return trusted
+      const human = Number(Boolean(a.machine_translated || a.ai_translated)) - Number(Boolean(b.machine_translated || b.ai_translated))
+      if (human !== 0) return human
+      const byMatch = right.matchScore - left.matchScore
+      if (byMatch !== 0) return byMatch
+      const byRating = Number(b.ratings ?? 0) - Number(a.ratings ?? 0)
+      if (byRating !== 0) return byRating
+      return Number(b.download_count ?? 0) - Number(a.download_count ?? 0)
+    })
+    .map(({ item }) => item)
+}
+
+export function rankOpenSubtitlesFeatures (features, titles, year) {
+  const requestedTitles = (titles ?? []).filter(Boolean)
+  return [...(features ?? [])]
+    .filter(item => Number.isInteger(Number(item?.id)))
+    .map(item => {
+      const attributes = item.attributes ?? {}
+      const candidateTitles = [attributes.title, attributes.original_title, attributes.movie_name].filter(Boolean)
+      const matchScore = Math.max(0, ...requestedTitles.flatMap(title => candidateTitles.map(candidate => titleScore(title, candidate))))
+      const yearMatches = !Number.isInteger(Number(year)) || !Number.isInteger(Number(attributes.year)) || Number(attributes.year) === Number(year)
+      return { item, matchScore, yearMatches }
+    })
+    .filter(({ matchScore, yearMatches }) => matchScore >= 0.6 && yearMatches)
+    .sort((left, right) => right.matchScore - left.matchScore)
+    .map(({ item }) => item)
+}
+
+async function resolveOpenSubtitlesFeature (fetcher, query, proxyUrl, year, lookupTitles) {
+  const candidates = []
+  for (const title of lookupTitles) {
+    const response = await fetcher(workerUrl(proxyUrl, '/opensubtitles/features', { query: title, year }))
+    if (!response.ok) continue
+    const payload = await response.json()
+    if (Array.isArray(payload?.data)) candidates.push(...payload.data)
+  }
+  const distinct = [...new Map(candidates.filter(item => item?.id).map(item => [item.id, item])).values()]
+  return rankOpenSubtitlesFeatures(distinct, query.titles, year)[0]
+}
+
+async function openSubtitlesResults (fetcher, query, proxyUrl, year) {
+  const lookupTitles = [...new Set((query.titles ?? []).filter(Boolean))]
+    .sort((left, right) => normalizeTitle(right).length - normalizeTitle(left).length)
+    .slice(0, 3)
+  const candidates = []
+  const feature = await resolveOpenSubtitlesFeature(fetcher, query, proxyUrl, year, lookupTitles)
+  if (feature) {
+    const response = await fetcher(workerUrl(proxyUrl, '/opensubtitles/search', { parent_feature_id: feature.id, episode: query.episode, year }))
+    if (response.ok) {
+      const payload = await response.json()
+      if (Array.isArray(payload?.data)) candidates.push(...payload.data)
+    }
+  } else {
+    for (const title of lookupTitles) {
+      const response = await fetcher(workerUrl(proxyUrl, '/opensubtitles/search', { query: title, episode: query.episode, year }))
+      if (!response.ok) continue
+      const payload = await response.json()
+      if (Array.isArray(payload?.data)) candidates.push(...payload.data)
+    }
+  }
+
+  const distinct = [...new Map(candidates
+    .filter(item => item?.attributes?.files?.[0]?.file_id)
+    .map(item => [item.attributes.files[0].file_id, item])).values()]
+  return rankOpenSubtitles(distinct, query.titles, query.episode)
+    .slice(0, OPENSUBTITLES_RESULT_LIMIT)
+    .map(item => ({
+      url: workerUrl(proxyUrl, '/opensubtitles/subtitle', { file_id: item.attributes.files[0].file_id }),
+      language: openSubtitlesFileName(item)
+    }))
 }
 
 async function getData (fetcher, path, params, proxyUrl) {
@@ -148,6 +261,19 @@ async function resolveSeries (fetcher, query, proxyUrl) {
   return distinct.find(item => Number(item.anilistId) === Number(query.anilistId)) ?? selectSeries(distinct, query.titles)
 }
 
+async function anime365Results (fetcher, query, proxyUrl, series) {
+  const episodes = await getData(fetcher, '/episodes', { seriesId: series.id, episodeInt: query.episode, isActive: 1, limit: 20 }, proxyUrl)
+  const episode = episodeForNumber(Array.isArray(episodes) ? episodes : [], query.episode)
+  if (!episode) return []
+
+  const translations = await getData(fetcher, '/translations', { episodeId: episode.id, type: 'subRu', isActive: 1, limit: 50 }, proxyUrl)
+  return rankTranslations(Array.isArray(translations) ? translations : [])
+    .map(item => ({
+      url: subtitleUrl(`${API_ORIGIN}/translations/ass/${item.id}?download=1`, proxyUrl),
+      language: translationFileName(item)
+    }))
+}
+
 export class HayaseRussianSubsSource extends BaseSubtitleSource {
   async test () {
     try {
@@ -165,23 +291,20 @@ export class HayaseRussianSubsSource extends BaseSubtitleSource {
     const fetcher = query.fetch ?? fetch
     if (options.adapterUrl) return adapterResults(fetcher, options.adapterUrl, query)
     const subtitleProxyUrl = options.subtitleProxyUrl || DEFAULT_SUBTITLE_PROXY_URL
+    const maxResults = clampMaxResults(options.maxResults)
 
-    const series = await resolveSeries(fetcher, query, subtitleProxyUrl)
-    if (!series) return []
+    let anime365 = []
+    let openSubtitles = []
+    let series
+    try {
+      series = await resolveSeries(fetcher, query, subtitleProxyUrl)
+      if (series) anime365 = await anime365Results(fetcher, query, subtitleProxyUrl, series)
+    } catch {}
+    try { openSubtitles = await openSubtitlesResults(fetcher, query, subtitleProxyUrl, series?.year) } catch {}
 
-    const episodes = await getData(fetcher, '/episodes', { seriesId: series.id, episodeInt: query.episode, isActive: 1, limit: 20 }, subtitleProxyUrl)
-    const episode = episodeForNumber(Array.isArray(episodes) ? episodes : [], query.episode)
-    if (!episode) return []
-
-    const translations = await getData(fetcher, '/translations', { episodeId: episode.id, type: 'subRu', isActive: 1, limit: 50 }, subtitleProxyUrl)
-    return rankTranslations(Array.isArray(translations) ? translations : [])
-      .slice(0, clampMaxResults(options.maxResults))
-      .map(item => ({
-        url: subtitleUrl(`${API_ORIGIN}/translations/ass/${item.id}?download=1`, subtitleProxyUrl),
-        // Hayase uses `language` as the fetched file name and rejects names
-        // without a supported subtitle extension before parsing the payload.
-        language: translationFileName(item)
-      }))
+    if (!anime365.length) return openSubtitles.slice(0, maxResults)
+    if (!openSubtitles.length || maxResults === 1) return anime365.slice(0, maxResults)
+    return [...anime365.slice(0, maxResults - 1), openSubtitles[0]]
   }
 }
 
